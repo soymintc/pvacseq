@@ -1,0 +1,34 @@
+log_dir: /home/chois7/chois7/apollo/neoantigen/cluster_log
+reference_fasta: /juno/work/shah/isabl_data_lake/assemblies/GRCh37/GRCh37-lite/GRCh37-lite.fa
+
+hla:
+  # Optitype parameters
+  optitype:
+    perc_indent: 95
+    max_hits: 1
+    dist_range: 0
+    hla_ref: /juno/work/shah/vazquezi/projects/spectrum/resources/references/optitype/hla_reference_dna.fasta
+
+vep:
+    fasta: /home/chois7/.vep/homo_sapiens/98_GRCh37/Homo_sapiens.GRCh37.75.dna.primary_assembly.fa.gz
+    run_file: /home/chois7/chois7/packages/ensembl-vep-release-98.3/vep
+    plugins_dir: /juno/home/chois7/.vep/Plugins
+    cache_dir: /juno/home/chois7/.vep
+
+gatk:
+    run_file: /juno/home/chois7/miniconda3/envs/apollo/share/gatk4-4.2.6.1-0/gatk
+    interval: 6:27350704-32473203
+
+vt:
+    run_file: /juno/home/chois7/miniconda3/envs/apollo/bin/vt
+
+vcf_readcount_annotator:
+    run_file: /juno/home/chois7/miniconda3/envs/apollo/bin/vcf-readcount-annotator
+
+# Output suffixes
+outputs:
+  out: outputs
+  log: logs
+  bench: benchmarks
+  work: scratch
+ 
