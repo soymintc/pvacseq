@@ -31,4 +31,7 @@ outputs:
   log: logs
   bench: benchmarks
   work: scratch
- 
+
+
+mem_mb: 4000
+disk_mb: 4000

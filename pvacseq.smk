@@ -245,7 +245,7 @@ rule maf_to_vcf:
             subdir=config['outputs']['out']
         ),
     singularity:
-        '/juno/work/shah/mondrian/singularity/variant_v0.0.26.sif' # instance containing maf2vcf.pl
+        '/juno/work/shah/mondrian/singularity/variant_v0.0.26.sif' # contains maf2vcf.pl
     shell:
         'maf2vcf.pl --input-maf {input.maf} --ref-fasta {input.ref} ' +
         '--output-dir {params.outdir} ' +
@@ -416,6 +416,8 @@ rule pvacseq:
             outdir=output_dir,
             subdir=config['outputs']['out'],
         ),
+        # TODO: reduce modes; e.g. use NetMHCcons for NetMHC, (NetMHCpan), and PickPocket
+        # TODO: use threading option -t N_THREADS
         modes = 'MHCflurry MHCnuggetsI MHCnuggetsII NNalign NetMHC PickPocket SMM SMMPMBEC SMMalign',
     singularity: '/juno/work/shah/users/chois7/apollo/pvactools_latest.sif'
     log:
@@ -423,6 +425,9 @@ rule pvacseq:
             outdir=output_dir,
             subdir=config['outputs']['log'],
         ),
+    resources:
+        mem_mb=12000,
+        disk_mb=4000,
     shell:
         ## input.hla content:
         #         A1      A2      B1      B2      C1      C2      Reads   Objective
@@ -430,8 +435,13 @@ rule pvacseq:
         'hlas=$(cat {input.hla} | tail -n 1 | cut -f2,3,4,5,6,7) && '
         'hlacs="" && '
         'for hla in ${{hlas}}; do echo $hla; hlacs+="HLA-${{hla}},"; done && '
-        'pvacseq run {input.vcf} ' +
+        'pvacseq run ' +
+        '--iedb-install-directory /opt/iedb ' + # local IEDB directory
+        '--blastp-path /opt/ncbi-blast-2.12.0+/bin/blastp ' + # local BLASTP binary #'--keep-tmp-files ' + # keep temp
+        '-t 8 ' + # threading
+        '{input.vcf} ' +
         '{sample_id} '.format(sample_id=config['sample_id']) +
-        '${{hlacs::-1}} {params.modes} ' + # HLA-A*24:02,...,HLA-C*08:02, -> HLA-A*24:02,...,HLA-C*08:02
+        '${{hlacs::-1}} ' + # HLA-A*24:02,...,HLA-C*08:02, -> rm comma at the end
+        '{params.modes} ' + 
         '{params.outdir} &> {log}'
 
