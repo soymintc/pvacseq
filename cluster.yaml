@@ -1,8 +1,8 @@
 __default__:
-    time: "24:00"
+    time: "96:00"
     nCPUS: 8
-    memory: 12
+    memory: 20
     name: "JOBNAME.{rule}.{wildcards}"
     output: "{config[log_dir]}/{rule}.{wildcards}.out"
-    resources: "\"rusage[mem=12] span[hosts=1]\""
+    resources: "\"rusage[mem=20] span[hosts=1]\""
 
