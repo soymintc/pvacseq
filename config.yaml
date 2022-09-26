@@ -1,6 +1,8 @@
 log_dir: /home/chois7/chois7/apollo/neoantigen/cluster_log
 reference_fasta: /juno/work/shah/isabl_data_lake/assemblies/GRCh37/GRCh37-lite/GRCh37-lite.fa
 
+cohort_file: /juno/work/shah/users/chois7/apollo/neoantigen/n69/cohort.tsv
+
 hla:
   # Optitype parameters
   optitype:
