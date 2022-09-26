@@ -1,6 +1,16 @@
+import pandas as pd
+
 output_dir = config['output_dir']
 bam_file = config['bam_file']
 bai_file = config['bai_file']
+
+rule all:
+    input:
+        tsv ='{outdir}/{subdir}/pvacseq/MHC_Class_I/{sample_id}.expression_filtered.tsv'.format(
+            outdir=output_dir,
+            subdir=config['outputs']['out'],
+            sample_id=config['sample_id'],
+        ),
 
 # extract hla reads with samtools view and sort
 rule get_hla_reads:
@@ -26,8 +36,11 @@ rule get_hla_reads:
             outdir=output_dir,
             subdir=config['outputs']['out'],
         ),
+    singularity:
+        'docker://broadinstitute/gatk',
     shell:
-        '{gatk} PrintReads '.format(gatk=config['gatk']['run_file']) +
+        #'{gatk} PrintReads '.format(gatk=config['gatk']['run_file']) 
+        'gatk PrintReads ' +
         '-I {input.bam} ' +
         '-L {interval} '.format(interval=config['gatk']['interval']) + # chrO:0-9 format
         '-O {output.hla_bam} > {log} 2>&1 && ' +
@@ -82,16 +95,16 @@ rule optitype_convert:
             subdir=config['outputs']['bench']
         ),
     singularity:
-        "docker://biocontainers/samtools:v1.9-4-deb_cv1"
+        "docker://biocontainers/samtools:v1.9-4-deb_cv1",
     shell:
         # Subset reads mapped to chr 6
-        'samtools view -b -f3 {input.hla_bam} \"6\" > {output.chr6} 2> {log}; ' +
+        'samtools view -b -f3 {input.hla_bam} \"6\" > {output.chr6} 2> {log}; ' 
         # Subset unmapped reads
-        'samtools view -b -f13 {input.hla_bam} > {output.unmapped} 2>> {log}; ' +
+        'samtools view -b -f13 {input.hla_bam} > {output.unmapped} 2>> {log}; ' 
         # Merge reads mapped to chr 6 and unmapped reads
-        '(samtools merge -f {output.chr6_unmapped} {output.chr6} {output.unmapped}) 2>> {log}; ' +
+        '(samtools merge -f {output.chr6_unmapped} {output.chr6} {output.unmapped}) 2>> {log}; ' 
         # Splitting BAM file into paired-ends and create FASTQs
-        'samtools view -bf 0x40 {output.chr6_unmapped} | samtools bam2fq - > {output.fastq_R1} 2>> {log}; ' +
+        'samtools view -bf 0x40 {output.chr6_unmapped} | samtools bam2fq - > {output.fastq_R1} 2>> {log}; ' 
         'samtools view -bf 0x80 {output.chr6_unmapped} | samtools bam2fq - > {output.fastq_R2} 2>> {log}'
 
 # optitype razers
@@ -131,7 +144,7 @@ rule optitype_extract:
             subdir=config['outputs']['bench']
         ),
     singularity:
-        "docker://fred2/optitype"
+        "docker://fred2/optitype",
     shell:
         # create the command line using the parameters contained in config['razers']
         # add the output, reference and input paths that Snakemake will automatically replace
@@ -172,7 +185,7 @@ rule optitype_convert_extracted:
             subdir=config['outputs']['bench']
         ),
     singularity:
-        "docker://biocontainers/samtools:v1.9-4-deb_cv1"
+        "docker://biocontainers/samtools:v1.9-4-deb_cv1",
     shell:
         # create the command line using the input
         'samtools bam2fq {input.hla_bam_R1} > {output.hla_fastq_R1} 2> {log}; '
@@ -215,13 +228,13 @@ rule optitype:
             subdir=config['outputs']['bench']
         ),
     singularity:
-        "docker://fred2/optitype"
+        "docker://fred2/optitype",
     shell:
-        'OPTITYPE_DIR=/usr/local/bin/OptiType; ' +
+        'OPTITYPE_DIR=/usr/local/bin/OptiType; ' 
         # create the command line using the input paths
-        'python2.7 $OPTITYPE_DIR/OptiTypePipeline.py -i {input.hla_fastq_R1} {input.hla_fastq_R2} ' +
+        'python2.7 $OPTITYPE_DIR/OptiTypePipeline.py -i {input.hla_fastq_R1} {input.hla_fastq_R2} ' 
         # add the output path and some parameters
-        '--dna --config $OPTITYPE_DIR/config.ini --prefix sample -v -o {params.outdir} ' +
+        '--dna --config $OPTITYPE_DIR/config.ini --prefix sample -v -o {params.outdir} ' 
         # dump all error output to the log file. Redirection is made outside of the container
         '&> {log}'
 
@@ -245,10 +258,10 @@ rule maf_to_vcf:
             subdir=config['outputs']['out']
         ),
     singularity:
-        '/juno/work/shah/mondrian/singularity/variant_v0.0.26.sif' # contains maf2vcf.pl
+        '/juno/work/shah/mondrian/singularity/variant_v0.0.26.sif', # contains maf2vcf.pl
     shell:
-        'maf2vcf.pl --input-maf {input.maf} --ref-fasta {input.ref} ' +
-        '--output-dir {params.outdir} ' +
+        'maf2vcf.pl --input-maf {input.maf} --ref-fasta {input.ref} ' 
+        '--output-dir {params.outdir} ' 
         '--output-vcf {output} &> {log}' 
 
 rule vep:
@@ -269,7 +282,7 @@ rule vep:
             subdir=config['outputs']['log']
         ),
     shell:
-        'module load perl && ' +
+        'module load perl && ' 
         '{vep} '.format(vep=config['vep']['run_file']) +
         '--input_file {input.vcf} --format vcf ' +
         '--output_file {output.vcf} --vcf ' +
@@ -277,7 +290,7 @@ rule vep:
         '--fasta {input.ref} ' +
         '--offline --cache ' +
         '--plugin Frameshift --plugin Wildtype ' +
-        '--dir_plugins {plugins_dir} '.format(plugins_dir=config['vep']['plugins_dir']) + 
+        '--dir_plugins {plugins_dir} '.format(plugins_dir=config['vep']['plugins_dir']) +
         '--dir_cache {cache_dir} '.format(cache_dir=config['vep']['cache_dir']) +
         '--force_overwrite &> {log}'
 
@@ -297,9 +310,12 @@ rule vt_decompose:
             outdir=output_dir,
             subdir=config['outputs']['log']
         ),
+    singularity:
+        "docker://zlskidmore/vt",
     shell:
-        '{vt} decompose '.format(vt=config['vt']['run_file']) +
-        '-s {input.vcf} ' +
+        #'{vt} decompose '.format(vt=config['vt']['run_file']) 
+        'vt decompose '
+        '-s {input.vcf} '
         '-o {output.vcf} &> {log}' 
 
 rule bam_readcount:
@@ -332,7 +348,7 @@ rule bam_readcount:
             subdir=config['outputs']['out'],
         )
     singularity:
-        '/juno/work/shah/users/chois7/apollo/neoantigen/bam-readcount_helper_v0.0.3.sif'
+        '/juno/work/shah/users/chois7/apollo/neoantigen/bam-readcount_helper_v0.0.3.sif',
     shell:
         'python /usr/bin/bam_readcount_helper.py ' +
         '{input.vcf} ' +
@@ -362,8 +378,11 @@ rule vcf_readcount_annotator_snv:
             outdir=output_dir,
             subdir=config['outputs']['log'],
         ),
+    singularity:
+        'docker://griffithlab/vatools',
     shell:
-        '{vra} '.format(vra=config['vcf_readcount_annotator']['run_file']) +
+        #'{vra} '.format(vra=config['vcf_readcount_annotator']['run_file']) 
+        'vcf-readcount-annotator ' +
         '{input.vcf} {input.snv_tsv} ' +
         'DNA -s {sample_id} '.format(sample_id=config['sample_id']) +
         '-t snv -o {output.vcf} &> {log}'
@@ -389,8 +408,11 @@ rule vcf_readcount_annotator_indel:
             outdir=output_dir,
             subdir=config['outputs']['log'],
         ),
+    singularity:
+        'docker://griffithlab/vatools',
     shell:
-        '{vra} '.format(vra=config['vcf_readcount_annotator']['run_file']) +
+        #'{vra} '.format(vra=config['vcf_readcount_annotator']['run_file']) +
+        'vcf-readcount-annotator ' +
         '{input.vcf} {input.indel_tsv} ' +
         'DNA -s {sample_id} '.format(sample_id=config['sample_id']) +
         '-t indel -o {output.vcf} > {log} 2>&1'
@@ -419,7 +441,7 @@ rule pvacseq:
         # TODO: reduce modes; e.g. use NetMHCcons for NetMHC, (NetMHCpan), and PickPocket
         # TODO: use threading option -t N_THREADS
         modes = 'MHCflurry MHCnuggetsI MHCnuggetsII NNalign NetMHC PickPocket SMM SMMPMBEC SMMalign',
-    singularity: '/juno/work/shah/users/chois7/apollo/pvactools_latest.sif'
+    singularity: '/juno/work/shah/users/chois7/apollo/pvactools_latest.sif',
     log:
         '{outdir}/{subdir}/pvacseq/sample.log'.format(
             outdir=output_dir,
@@ -432,11 +454,11 @@ rule pvacseq:
         ## input.hla content:
         #         A1      A2      B1      B2      C1      C2      Reads   Objective
         # 0       A*24:02 A*32:01 B*14:01 B*15:01 C*03:03 C*08:02 1300.0  1241.4799999999998
-        'hlas=$(cat {input.hla} | tail -n 1 | cut -f2,3,4,5,6,7) && '
-        'hlacs="" && '
-        'for hla in ${{hlas}}; do echo $hla; hlacs+="HLA-${{hla}},"; done && '
-        'pvacseq run ' +
-        '--iedb-install-directory /opt/iedb ' + # local IEDB directory
+        'hlas=$(cat {input.hla} | tail -n 1 | cut -f2,3,4,5,6,7) && ' +
+        'hlacs="" && ' +
+        'for hla in ${{hlas}}; do echo $hla; hlacs+="HLA-${{hla}},"; done && ' +
+        'pvacseq run '  +
+        '--iedb-install-directory /opt/iedb ' + # local IEDB directory 
         '--blastp-path /opt/ncbi-blast-2.12.0+/bin/blastp ' + # local BLASTP binary #'--keep-tmp-files ' + # keep temp
         '-t 8 ' + # threading
         '{input.vcf} ' +
@@ -444,4 +466,43 @@ rule pvacseq:
         '${{hlacs::-1}} ' + # HLA-A*24:02,...,HLA-C*08:02, -> rm comma at the end
         '{params.modes} ' + 
         '{params.outdir} &> {log}'
+
+def _get_kallisto(rna_sample_id):
+    paths_path = "/juno/work/shah/users/chois7/apollo/APOLLO.KALLISTO.tsv"
+    assert os.path.exists(paths_path)
+    paths = pd.read_table(paths_path)
+    paths = paths[paths['isabl_sample_id']==rna_sample_id]
+    paths = paths[ (paths["result_type"] == "abundance_tsv")].reset_index()["result_filepath"]
+    assert len(paths) == 1, f'paths length not 1: {paths}'
+    path = paths[0]
+    return path
+    
+rule pvacseq_expression_filter: 
+    input:
+        tsv ='{outdir}/{subdir}/pvacseq/MHC_Class_I/{sample_id}.filtered.tsv'.format(
+            outdir=output_dir,
+            subdir=config['outputs']['out'],
+            sample_id=config['sample_id'],
+        ),
+        kallisto=_get_kallisto(config['rna_sample_id']),
+    output:
+        tsv ='{outdir}/{subdir}/pvacseq/MHC_Class_I/{sample_id}.expression_filtered.tsv'.format(
+            outdir=output_dir,
+            subdir=config['outputs']['out'],
+            sample_id=config['sample_id'],
+        ),
+    params:
+        cutoff = 1.0,
+    log:
+        '{outdir}/{subdir}/pvacseq_input/expression_filter.log'.format(
+            outdir=output_dir,
+            subdir=config['outputs']['log'],
+        ),
+    singularity: 'docker://soymintc/clickpdvcf',
+    shell:
+        'python scripts/expression_filter.py '
+        '--pvacseq {input.tsv} '
+        '--kallisto {input.kallisto} '
+        '--cutoff {params.cutoff} '
+        '--output {output.tsv} 2> {log}'
 
